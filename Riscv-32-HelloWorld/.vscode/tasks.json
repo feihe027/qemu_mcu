@@ -1,0 +1,19 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run QEMU",
+            "type": "shell",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "linux": {
+                "command": "make qemu_remote",
+                "externalConsole": true,
+                "args": [ ],
+                "isBackground": true,
+            }
+        }
+    ]
+}

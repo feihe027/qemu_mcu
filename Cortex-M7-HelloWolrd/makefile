@@ -118,7 +118,7 @@ qemu:
 	C:\msys64\mingw64\bin\qemu-system-arm.exe -machine mps2-an385 -monitor null -semihosting --semihosting-config enable=on,target=native -kernel $(APP) -serial stdio -nographic
 	
 qemu_remote:
-	C:\msys64\mingw64\bin\qemu-system-arm.exe -machine mps2-an385 -monitor null -semihosting --semihosting-config enable=on,target=native -kernel $(APP) -serial stdio -nographic -S -s
+	start /b C:\msys64\mingw64\bin\qemu-system-arm.exe -machine mps2-an385  -monitor null -semihosting --semihosting-config enable=on,target=native -kernel $(APP) -serial stdio -nographic -S -s
 	
 $(OBJ_DIR):
 	mkdir $@
