@@ -1,0 +1,7 @@
+target remote localhost:2234
+set arch riscv:rv32
+set remotetimeout 250
+flushregs
+file ./output/HelloWorld.elf
+load
+tb main

@@ -1,0 +1,6 @@
+target remote localhost:1234
+set remotetimeout 250
+flushregs
+file ./HelloWorld.elf
+load
+tb main
