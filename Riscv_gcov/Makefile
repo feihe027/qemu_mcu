@@ -4,9 +4,9 @@ IMAGE := HelloWorld.elf
 # The directory that contains the /source and /demo sub directories.
 FREERTOS_ROOT = ./../../../..
 
-CC = J:\\2024\\NucleiStudio\\toolchain\\gcc\\bin\\riscv64-unknown-elf-gcc
-LD = J:\\2024\\NucleiStudio\\toolchain\\gcc\\bin\\riscv64-unknown-elf-gcc
-SIZE = riscv32-unknown-elf-size
+CC = riscv64-unknown-elf-gcc
+LD = riscv64-unknown-elf-gcc
+SIZE = riscv64-unknown-elf-size
 MAKE = make
 
 
@@ -14,7 +14,7 @@ CFLAGS +=  -c -g -O0 -DENABLE_STDLIB_H -DENABLE_NR_SHELL -DENABLE_TLSF -DENABLE_
 
 LDFLAGS += --coverage -nostartfiles -Xlinker --gc-sections -Wl,-Map,$(OUTPUT_DIR)/HelloWorld.map \
            -T./rom.ld -mabi=ilp32 -mcmodel=medlow -Xlinker \
-           --defsym=__stack_size=1024 -Wl,--start-group -Wl,--end-group
+           --defsym=__stack_size=1024 -Wl,--start-group -Wl,--end-group 
 
 
 # Generate GCC_VERSION in number format

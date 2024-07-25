@@ -62,7 +62,9 @@
 /* Compare to gcc/gcov-counter.def and gcc/gcov-io.h */
 /* GCC has changed this back and forth over time, do not know exact GCC versions */
 /* This has been used with GCC 7.5.0 and GCC 11.1.0 */
-#if (__GNUC__ >= 10)
+#if (__GNUC__ > 13)
+#define GCOV_COUNTERS           9
+#elif (__GNUC__ >= 10)
 #define GCOV_COUNTERS			8
 #elif (__GNUC__ >= 5) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 9)
 #define GCOV_COUNTERS			9
