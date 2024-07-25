@@ -63,7 +63,7 @@ GCC_COPY      := $(GCC_TOOLCHAIN)-objcopy
 
 # GCC options
 GCC_ASM_OPTS          := -g -mcpu=cortex-m7 -mthumb -fno-builtin -I $(INC_DIR)
-GCC_CC_OPTS           := -g -O0 -std=gnu11 -mcpu=cortex-m7 -mthumb -c $(CEXTFLAGS) $(SPEC_FLAGS) -ffunction-sections -fdata-sections -fno-builtin -Wall -I $(INC_DIR)
+GCC_CC_OPTS           := -g -O1 -std=gnu11 -mcpu=cortex-m7 -mthumb -c $(CEXTFLAGS) $(SPEC_FLAGS) -ffunction-sections -fdata-sections -fno-builtin -Wall -I $(INC_DIR)
 
 GCC_LINKER_OPTS_ASM   :=
 GCC_LINKER_OPTS_CSRC  :=
@@ -74,7 +74,7 @@ APP_C_SRC := $(wildcard $(SRC_DIR)/*.c)
 APP_S_SRC := $(wildcard $(ASM_DIR)/*.S)
 OBJ_FILES := $(APP_C_SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o) 
 OBJ_FILES += $(APP_S_SRC:$(ASM_DIR)/%.s=$(OBJ_DIR)/%.o)
-
+OBJ_FILES += obj/test.o
 
 ASM         := $(GCC_ASM)
 CC          := $(GCC_TOOL)
@@ -115,10 +115,10 @@ clean:
 	$(call RM_FILES, *.bin)
 
 qemu:
-	C:\msys64\mingw64\bin\qemu-system-arm.exe -machine mps2-an385 -monitor null -semihosting --semihosting-config enable=on,target=native -kernel $(APP) -serial stdio -nographic
+	C:\msys64\mingw64\bin\qemu-system-arm.exe -machine mps2-an500  -cpu cortex-m7 -monitor null -semihosting --semihosting-config enable=on,target=native -kernel $(APP) -serial stdio -nographic
 	
 qemu_remote:
-	start /b C:\msys64\mingw64\bin\qemu-system-arm.exe -machine mps2-an385  -monitor null -semihosting --semihosting-config enable=on,target=native -kernel $(APP) -serial stdio -nographic -S -s
+	start /b C:\msys64\mingw64\bin\qemu-system-arm.exe -machine mps2-an500  -monitor null -semihosting --semihosting-config enable=on,target=native -kernel $(APP) -serial stdio -nographic -S -s
 	
 $(OBJ_DIR):
 	mkdir $@

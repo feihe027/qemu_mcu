@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/output/HelloWorld.elf",
             "cwd": "${workspaceFolder}",
-            "miDebuggerPath": "riscv-nuclei-elf-gdb",
+            "miDebuggerPath": "C:\\msys64\\mingw64\\bin\\gdb-multiarch.exe",
             "miDebuggerServerAddress": "localhost:1234",
             "stopAtEntry": true,
             //"preLaunchTask": "Run QEMU"

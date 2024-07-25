@@ -13,7 +13,7 @@
             "miDebuggerPath": "arm-none-eabi-gdb.exe",
             "miDebuggerServerAddress": "localhost:1234",
             "stopAtEntry": true,
-            "preLaunchTask": "Run QEMU"
+            //"preLaunchTask": "Run QEMU"
         }
     ]
 }
