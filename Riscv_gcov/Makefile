@@ -8,10 +8,12 @@ ifeq ($(OS),Windows_NT)
 	CC =  E:\\Works\\MTK-WIFI\\bl_iot_sdk\\toolchain\\riscv\\MSYS\\bin\\riscv64-unknown-elf-gcc
 	LD =  E:\\Works\\MTK-WIFI\\bl_iot_sdk\\toolchain\\riscv\\MSYS\\bin\\riscv64-unknown-elf-gcc
 	SIZE = E:\\Works\\MTK-WIFI\\bl_iot_sdk\\toolchain\\riscv\\MSYS\\bin\\\riscv64-unknown-elf-size
+	GCOV = E:\\Works\\MTK-WIFI\\bl_iot_sdk\\toolchain\\riscv\\MSYS\\bin\\riscv64-unknown-elf-gcov
 else
 	CC =  /opt/riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-x86_64-linux-ubuntu14/bin/riscv64-unknown-elf-gcc
 	LD =  /opt/riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-x86_64-linux-ubuntu14/bin/riscv64-unknown-elf-gcc
 	SIZE = /opt/riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-x86_64-linux-ubuntu14/bin/riscv64-unknown-elf-size
+	GCOV = /opt/riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-x86_64-linux-ubuntu14/bin/riscv64-unknown-elf-gcov
 endif
 MAKE = make
 
@@ -76,9 +78,15 @@ $(OUTPUT_DIR)/$(IMAGE): $(OBJS_OUTPUT) Makefile
 $(DEP_OUTPUT):
 include $(wildcard $(DEP_OUTPUT))
 
+run: clean all
+	python3 extract.py
+	cd $(OUTPUT_DIR) && lcov --gcov-tool $(GCOV)  --captur --directory . -o main.info
+	cd $(OUTPUT_DIR) && genhtml -o report main.info --show-details --legend
+
 clean:
-	rm -f $(OUTPUT_DIR)/$(IMAGE) $(OUTPUT_DIR)/*.o $(OUTPUT_DIR)/*.d $(OUTPUT_DIR)/*.map $(OUTPUT_DIR)/*.* 
-	
+	rm -rf $(OUTPUT_DIR)/$(IMAGE) $(OUTPUT_DIR)/*.o $(OUTPUT_DIR)/*.d $(OUTPUT_DIR)/*.map $(OUTPUT_DIR)
+	@mkdir $(OUTPUT_DIR)
+
 qemu:
 	qemu-system-riscv32 -machine virt -serial stdio -nodefaults -monitor null -bios none -smp 1 -kernel $(OUTPUT_DIR)/$(IMAGE) -nographic
 
@@ -89,4 +97,4 @@ qemu_remote:
 #this makefile.
 print-%  : ; @echo $* = $($*)
 
-.PHONY: all clean qemu qemu_remote
+.PHONY: all clean qemu qemu_remote run
