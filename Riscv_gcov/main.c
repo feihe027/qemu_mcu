@@ -85,6 +85,12 @@ int UartWrite(char *pcString, int iStringLength)
 void main(void)
 {
     __gcov_call_constructors();
-    UartWrite("Hello World!\n", 13);
+    for (int i = 1; i < 10; i++)
+    {
+        if (i % 3 == 0)
+            UartWrite("Hello World!\n", 13);
+        if (i % 11 == 0)
+            UartWrite("12345678901!\n", 13);
+    }
     __gcov_exit();
 }

@@ -4,9 +4,15 @@ IMAGE := HelloWorld.elf
 # The directory that contains the /source and /demo sub directories.
 FREERTOS_ROOT = ./../../../..
 
-CC = riscv64-unknown-elf-gcc
-LD = riscv64-unknown-elf-gcc
-SIZE = riscv64-unknown-elf-size
+ifeq ($(OS),Windows_NT)	
+	CC =  E:\\Works\\MTK-WIFI\\bl_iot_sdk\\toolchain\\riscv\\MSYS\\bin\\riscv64-unknown-elf-gcc
+	LD =  E:\\Works\\MTK-WIFI\\bl_iot_sdk\\toolchain\\riscv\\MSYS\\bin\\riscv64-unknown-elf-gcc
+	SIZE = E:\\Works\\MTK-WIFI\\bl_iot_sdk\\toolchain\\riscv\\MSYS\\bin\\\riscv64-unknown-elf-size
+else
+	CC =  /opt/riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-x86_64-linux-ubuntu14/bin/riscv64-unknown-elf-gcc
+	LD =  /opt/riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-x86_64-linux-ubuntu14/bin/riscv64-unknown-elf-gcc
+	SIZE = /opt/riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-x86_64-linux-ubuntu14/bin/riscv64-unknown-elf-size
+endif
 MAKE = make
 
 
@@ -35,6 +41,7 @@ SOURCE_FILES += ./main.c
 SOURCE_FILES += ./gcov_public.c 
 SOURCE_FILES += ./gcov_gcc.c 
 SOURCE_FILES += ./gcov_printf.c
+SOURCE_FILES += ./test.c
 ASM_SOURCE_FILES += ./start.S
 ASM_SOURCE_FILES += ./vector.S
 
