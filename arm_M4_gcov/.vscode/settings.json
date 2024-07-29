@@ -7,6 +7,8 @@
     "files.associations": {
         "*.py": "python",
         "stm32f4xx_hal_cortex.h": "c",
-        "exceptionhandlers.h": "c"
+        "exceptionhandlers.h": "c",
+        "*.def": "c",
+        "trace.h": "c"
     }
 }

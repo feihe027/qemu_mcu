@@ -14,6 +14,8 @@ OPT_LEVEL ?= 0
 PLATFORM ?= CORTEXA
 OUTPUTCHAN ?= SEMIHOSTED
 
+GCOV = D:/toolchains/arm/arm-eabi-v103/bin/arm-none-eabi-gcov
+
 # Other switches the user should not normally need to change:
 ARCH = armv8.4-a
 DEBUG_FLAGS = -g
@@ -93,7 +95,7 @@ LINKER_OPTS_CSRC          := $(GCC_LINKER_OPTS_CSRC)
 LINKER_FILE               := $(GCC_LINKER_FILE)
 
 
-.phony: all clean qemu qemu_remote
+.phony: all clean qemu qemu_remote run
 
 all: FORCE $(APP)
 
@@ -125,6 +127,11 @@ qemu:
 qemu_remote:
 	C:/msys64/mingw64/bin/qemu-system-arm.exe -machine olimex-stm32-h405 -display none -semihosting -serial stdio -kernel HelloWorld.elf -S -s
 	
+run: 
+	python extract.py
+	cd obj && lcov --gcov-tool $(GCOV)  --captur --directory . -o main.info
+	cd obj && genhtml -o ../report main.info --show-details --legend
+
 $(OBJ_DIR):
 	mkdir $@
 	@echo $(OBJ_FILES)

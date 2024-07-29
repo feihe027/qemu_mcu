@@ -33,6 +33,56 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 GCOV_LINKAGE /* @NO_INCLUDE_SRC static */ int gcov_exit_open_gcda_file (struct gcov_info *gi_ptr
             /* @NO_AUTO_GCDA_CREATION , struct gcov_filename *gf*/);
 
+/* Function to print a string without newline.
+ * Not used if you don't define either GCOV_OPT_PRINT_STATUS
+ * or GCOV_OPT_OUTPUT_SERIAL_HEXDUMP.
+ * If you do, you need to set this as appropriate for your system.
+ * You might need to add header files to gcc_public.c
+ */
+int printk(const char *fmt, ...);
+#define gcov_printf printk
+// #define GCOV_PRINT_STR(str) fputs((str), stdout)
+// #define GCOV_PRINT_STR(str) printf("%s", str)
+#define GCOV_PRINT_STR(str) gcov_printf("%s", str)
+// #define GCOV_PRINT_STR(str) puts((str))
+
+/* Function to print a number without newline.
+ * Not used if you don't define either GCOV_OPT_PRINT_STATUS
+ * or GCOV_OPT_OUTPUT_SERIAL_HEXDUMP.
+ * If you do, you need to set this as appropriate for your system.
+ * You might need to add header files to gcc_public.c
+ */
+// #define GCOV_PRINT_NUM(num) printf("%d", (num))
+#define GCOV_PRINT_NUM(num) gcov_printf("%d", (num))
+// #define GCOV_PRINT_NUM(num) print_num((num))
+
+/* Function to print hexdump address.
+ * Not used if you don't define GCOV_OPT_OUTPUT_SERIAL_HEXDUMP.
+ * If you do, you need to set this as appropriate for your system.
+ * You might need to add header files to gcc_public.c
+ */
+// #define GCOV_PRINT_HEXDUMP_ADDR(num) printf("%08x: ", (num))
+#define GCOV_PRINT_HEXDUMP_ADDR(num) gcov_printf("%08x: ", (num))
+
+/* Function to print hexdump data value.
+ * Not used if you don't define GCOV_OPT_OUTPUT_SERIAL_HEXDUMP.
+ * If you do, you need to set this as appropriate for your system.
+ * You might need to add header files to gcc_public.c
+ */
+// #define GCOV_PRINT_HEXDUMP_DATA(num) printf("%02x ", (num))
+#define GCOV_PRINT_HEXDUMP_DATA(num) gcov_printf("%02x ", (num))
+
+/* End of user settings ---------------------------------- */
+
+/* Opaque gcov_info. The gcov structures can change as for example in gcc 4.7 so
+ * we cannot use full definition here and they need to be placed in gcc specific
+ * implementation of gcov. This also means no direct access to the members in
+ * generic code and usage of the interface below.*/
+struct gcov_info;
+
+/* Compare to gcc/gcov-io.h */
+typedef unsigned gcov_unsigned_t;
+typedef long long gcov_type;
 
 struct gcov_fn_buffer
 {
@@ -504,8 +554,8 @@ gcov_sort_topn_counter_arrays (const struct gcov_info *gi_ptr)
   const struct gcov_fn_info *gfi_ptr;
   const struct gcov_ctr_info *ci_ptr;
 
-  if (!gi_ptr->merge[GCOV_COUNTER_ICALL_TOPNV]) 
-    return;
+  if (!gi_ptr->merge[GCOV_COUNTERS-1])
+      return;
 
   for (f_ix = 0; (unsigned)f_ix != gi_ptr->n_functions; f_ix++)
     {
@@ -515,8 +565,8 @@ gcov_sort_topn_counter_arrays (const struct gcov_info *gi_ptr)
         {
           if (!gi_ptr->merge[i])
             continue;
-          if (i == GCOV_COUNTER_ICALL_TOPNV)
-            {
+          if (i == GCOV_COUNTERS - 1)
+          {
               gcov_sort_icall_topn_counter (ci_ptr);
               break;
             }
@@ -549,7 +599,7 @@ dump_one_gcov (struct gcov_info *gi_ptr, /* @NO_GCDA_FILE struct gcov_filename *
   fn_buffer = 0;
   sum_buffer = 0;
 
-  gcov_sort_topn_counter_arrays (gi_ptr);
+  //gcov_sort_topn_counter_arrays (gi_ptr);
 
   error = gcov_exit_open_gcda_file (gi_ptr/* @NO_GCDA_FILE, gf*/);
   if (error == -1)
@@ -673,7 +723,7 @@ void __gcov_dump_one(struct gcov_root *root)
     return;
 
   trace_printf("%s", root->list->filename);
-  // gcov_do_dump(root->list, root->run_counted);
+  gcov_do_dump(root->list, root->run_counted);
 
   root->dumped = 1;
   root->run_counted = 1;
@@ -694,17 +744,264 @@ struct gcov_master __gcov_master =
   {GCOV_VERSION, 0};
 
 #endif
+gcov_unsigned_t gcov_buf[16*1024];
 
-void
-gcov_exit (void)
+const char *gcov_info_filename(struct gcov_info *info)
 {
-  __gcov_dump_one (&__gcov_root);
-  if (__gcov_root.next)
-    __gcov_root.next->prev = __gcov_root.prev;
-  if (__gcov_root.prev)
-    __gcov_root.prev->next = __gcov_root.next;
-  else
-    __gcov_master.root = __gcov_root.next;
+    return info->filename;
+}
+
+static size_t store_gcov_unsigned(gcov_unsigned_t *buffer, size_t off, gcov_unsigned_t v)
+{
+    gcov_unsigned_t *data;
+
+    if (buffer)
+    {
+        data = buffer + off;
+        *data = v;
+    }
+
+    /* return count of buffer data type units */
+    return sizeof(*data) / sizeof(*buffer);
+}
+
+/**
+ * store_gcov_tag_length - 32 bit tag and 32 bit length in gcov format to buffer
+ * @buffer: target buffer or NULL
+ * @off: offset into the buffer
+ * @tag: tag value to be stored
+ * @length: length value to be stored
+ *
+ * Number format defined by gcc: numbers are recorded in the 32 bit
+ * unsigned binary form of the endianness of the machine generating the
+ * file. 64 bit numbers are stored as two 32 bit numbers, the low part
+ * first. Returns the number of bytes stored. If @buffer is %NULL, doesn't store
+ * anything.
+ */
+/* Slightly like gcc/gcov-io.c function gcov_write_tag_length() (1-word tag and 1-word length) */
+/* or gcov_write_tag() (1-word tag and implied 1-word "length = 0") */
+/* Need buffer to be 32-bit-aligned for type-safe internal usage */
+static size_t store_gcov_tag_length(gcov_unsigned_t *buffer, size_t off, gcov_unsigned_t tag, gcov_unsigned_t length)
+{
+    gcov_unsigned_t *data;
+
+    if (buffer)
+    {
+        data = buffer + off;
+
+        data[0] = tag;
+        data[1] = length;
+    }
+
+    /* return count of buffer data type units */
+    return sizeof(*data) / sizeof(*buffer) * 2;
+}
+
+/**
+ * store_gcov_counter - store 64 bit number in gcov format to buffer
+ * @buffer: target buffer or NULL
+ * @off: offset into the buffer
+ * @v: value to be stored
+ *
+ * Number format defined by gcc: numbers are recorded in the 32 bit
+ * unsigned binary form of the endianness of the machine generating the
+ * file. 64 bit numbers are stored as two 32 bit numbers, the low part
+ * first. Returns the number of bytes stored. If @buffer is %NULL, doesn't store
+ * anything.
+ */
+/* Slightly like gcc/gcov-io.c function gcov_write_counter() (2-word item) */
+/* Need buffer to be 32-bit-aligned for type-safe internal usage */
+static size_t store_gcov_counter(gcov_unsigned_t *buffer, size_t off, gcov_type v)
+{
+    gcov_unsigned_t *data;
+
+    if (buffer)
+    {
+        data = buffer + off;
+
+        data[0] = (v & 0xffffffffUL);
+        data[1] = (v >> 32);
+    }
+
+    /* return count of buffer data type units */
+    return sizeof(*data) / sizeof(*buffer) * 2;
+}
+
+/**
+ * gcov_convert_to_gcda - convert profiling data set to gcda file format
+ * @buffer: the buffer to store file data or %NULL if no data should be stored
+ * @info: profiling data set to be converted
+ *
+ * Returns the number of bytes that were/would have been stored into the buffer.
+ */
+/* Our own creation, but compare to libgcc/libgcov-driver.c function write_one_data() */
+/* Need buffer to be 32-bit-aligned for type-safe internal usage */
+size_t gcov_convert_to_gcda(gcov_unsigned_t *buffer, struct gcov_info *gi_ptr)
+{
+    const struct gcov_fn_info *fi_ptr;
+    const struct gcov_ctr_info *ci_ptr;
+    unsigned int fi_idx;
+    unsigned int ct_idx;
+    unsigned int cv_idx;
+    size_t pos = 0; /* offset in buffer, in buffer data type units */
+
+    /* File header. */
+    pos += store_gcov_tag_length(buffer, pos, GCOV_DATA_MAGIC, gi_ptr->version);
+    pos += store_gcov_unsigned(buffer, pos, gi_ptr->stamp);
+
+    /* Write execution counts for each function.  */
+    for (fi_idx = 0; fi_idx < gi_ptr->n_functions; fi_idx++)
+    {
+        fi_ptr = gi_ptr->functions[fi_idx];
+
+#ifdef GCOV_OPT_RESET_WATCHDOG
+        /* In an embedded system, you might want to reset any watchdog timer here, */
+        /* depending on your timeout versus gcov tree size */
+        SP_WDG = WATCHDOG_RESET;
+#endif // GCOV_OPT_RESET_WATCHDOG
+
+        /* Function record. */
+        pos += store_gcov_tag_length(buffer, pos, GCOV_TAG_FUNCTION, GCOV_TAG_FUNCTION_LENGTH);
+
+        pos += store_gcov_unsigned(buffer, pos, fi_ptr->ident);
+        pos += store_gcov_unsigned(buffer, pos, fi_ptr->lineno_checksum);
+        pos += store_gcov_unsigned(buffer, pos, fi_ptr->cfg_checksum);
+
+        ci_ptr = fi_ptr->ctrs;
+
+        for (ct_idx = 0; ct_idx < GCOV_COUNTERS; ct_idx++)
+        {
+            if (!gi_ptr->merge[ct_idx])
+            {
+                /* Unused counter */
+                continue;
+            }
+
+            /* Counter record. */
+            pos += store_gcov_tag_length(buffer, pos,
+                                         GCOV_TAG_FOR_COUNTER(ct_idx),
+                                         GCOV_TAG_COUNTER_LENGTH(ci_ptr->num));
+
+            for (cv_idx = 0; cv_idx < ci_ptr->num; cv_idx++)
+            {
+                pos += store_gcov_counter(buffer, pos,
+                                          ci_ptr->values[cv_idx]);
+            }
+            ci_ptr++;
+        }
+    }
+
+    /* return count of bytes (convert from count of buffer data type units) */
+    return pos * sizeof(*buffer);
+}
+
+/**
+ * gcov_clear_counters - set profiling counters to zero
+ * @info: profiling data set to be cleared
+ *
+ */
+/* Our own creation, but compare to libgcc/libgcov-driver.c function write_one_data() */
+void gcov_clear_counters(struct gcov_info *gi_ptr)
+{
+    const struct gcov_fn_info *fi_ptr;
+    const struct gcov_ctr_info *ci_ptr;
+    unsigned int fi_idx;
+    unsigned int ct_idx;
+    unsigned int cv_idx;
+
+    /* Clear execution counts for each function.  */
+    for (fi_idx = 0; fi_idx < gi_ptr->n_functions; fi_idx++)
+    {
+        fi_ptr = gi_ptr->functions[fi_idx];
+
+        ci_ptr = fi_ptr->ctrs;
+
+        for (ct_idx = 0; ct_idx < GCOV_COUNTERS; ct_idx++)
+        {
+            if (!gi_ptr->merge[ct_idx])
+            {
+                /* Unused counter */
+                continue;
+            }
+
+            /* Counter record. */
+            for (cv_idx = 0; cv_idx < ci_ptr->num; cv_idx++)
+            {
+                ci_ptr->values[cv_idx] = 0;
+            }
+            ci_ptr++;
+        }
+    }
+
+    return;
+}
+
+void gcov_exit (void)
+{
+  struct gcov_info *listptr = __gcov_root.list;
+
+  gcov_unsigned_t gcovIndex = 0;
+  GCOV_PRINT_STR("__gcov_exit start");
+  GCOV_PRINT_STR("\n");
+
+
+  while (listptr->filename)
+  {
+      gcov_unsigned_t *buffer = NULL; // Need buffer to be 32-bit-aligned for type-safe internal usage
+
+      /* Do pretend conversion to see how many bytes are needed */
+      int bytesNeeded = gcov_convert_to_gcda(NULL, listptr);
+
+      if (bytesNeeded > sizeof(gcov_buf) / sizeof(char))
+      {
+          buffer = (gcov_unsigned_t *)NULL;
+      }
+      else
+      {
+          buffer = gcov_buf;
+      }
+
+      /* Do the real conversion into buffer */
+      gcov_convert_to_gcda(buffer, listptr);
+
+      GCOV_PRINT_NUM(gcovIndex);
+      GCOV_PRINT_STR(":Emitting ");
+      GCOV_PRINT_NUM(bytesNeeded);
+      GCOV_PRINT_STR(" bytes for ");
+      GCOV_PRINT_STR(gcov_info_filename(listptr));
+      GCOV_PRINT_STR("\n");
+    
+      /* If your embedded system does not support printf or an imitation,
+       * you'll need to change this code.
+       */
+      for (int i = 0; i < bytesNeeded; i++)
+      {
+          if (i % 16 == 0)
+              GCOV_PRINT_HEXDUMP_ADDR(i);
+          GCOV_PRINT_HEXDUMP_DATA((unsigned char)(((unsigned char *)buffer)[i]));
+          if (i % 16 == 15)
+              GCOV_PRINT_STR("\n");
+      }
+      GCOV_PRINT_STR("\n");
+      GCOV_PRINT_STR(gcov_info_filename(listptr));
+      GCOV_PRINT_STR("\n");
+
+
+      /* Other output methods might be imagined,
+       * if you have flash that can be written directly,
+       * or the luxury of a filesystem, etc.
+       */
+
+      listptr->filename = NULL;
+      listptr = listptr->next;
+      gcovIndex++;
+      if (gcovIndex > 50)
+        break;
+  } /* end while listptr */
+
+
+  GCOV_PRINT_STR("__gcov_exit finish");
+  GCOV_PRINT_STR("\n");
 }
 
 #endif /* !IN_GCOV_TOOL */
