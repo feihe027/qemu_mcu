@@ -127,7 +127,7 @@ qemu:
 qemu_remote:
 	C:/msys64/mingw64/bin/qemu-system-arm.exe -machine olimex-stm32-h405 -display none -semihosting -serial stdio -kernel HelloWorld.elf -S -s
 	
-run: 
+run: clean all
 	python extract.py
 	cd obj && lcov --gcov-tool $(GCOV)  --captur --directory . -o main.info
 	cd obj && genhtml -o ../report main.info --show-details --legend
